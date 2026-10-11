@@ -684,8 +684,12 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 			? { text: unboundedPresentation, truncated: false, originalChars: unboundedPresentation.length, returnedChars: unboundedPresentation.length, omittedChars: 0 }
 			: boundSearchPresentation(unboundedPresentation, buildGuidance(false), buildGuidance(true), maxInlineContentChars);
 
+		const summaryGuidance = hasApprovedSummary ? buildGuidance(false) : "";
 		return {
-			content: [{ type: "text", text: presentation.text }],
+			content: [
+				{ type: "text", text: presentation.text },
+				...(summaryGuidance ? [{ type: "text" as const, text: summaryGuidance }] : []),
+			],
 			structuredContent: searchStructuredContent(searchId, fetchId, opts.results),
 			details: {
 				queries: opts.queryList,
@@ -1043,6 +1047,13 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 					content.push({ type: "image", data: result.thumbnail.data, mimeType: result.thumbnail.mimeType });
 				}
 				content.push({ type: "text", text: output });
+				if (!truncated && storedContent && getSearchContentEnabled) {
+					const storedLabel = mode === "answer" ? "Original source content" : "Full content";
+					content.push({
+						type: "text",
+						text: `\n---\n${storedLabel} is stored as responseId "${responseId}". Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: 0 }) to retrieve it.`,
+					});
+				}
 
 				const imageCount = (result.frames?.length ?? 0) + (result.thumbnail ? 1 : 0);
 				return {

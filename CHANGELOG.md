@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Single-URL fetches and completed search summaries now include model-visible storage IDs and retrieval calls, so stored content remains reachable without access to host metadata. Guidance uses the configured retrieval tool name, respects disabled retrieval, and leaves raw bodies and approved summary text unchanged. Thanks to [@mothieras](https://github.com/mothieras) for [issue #548](https://github.com/nicobailon/pi-web-access/issues/548) and [PR #551](https://github.com/nicobailon/pi-web-access/pull/551).
+
 ## [0.38.0] - 2026-10-09
 
 ### Highlights
