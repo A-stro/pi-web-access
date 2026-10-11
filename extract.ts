@@ -274,6 +274,7 @@ function loadFetchRouting(): FetchRouting {
 export interface RegisteredToolNames {
 	webSearch?: string;
 	fetchContent?: string;
+	getSearchContent?: string;
 }
 
 /** Guidance for definitive origin 404/410 responses: no extraction provider

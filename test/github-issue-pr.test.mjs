@@ -558,3 +558,63 @@ test("REST fallback does not render positive changedFiles as none when files are
 	assert.match(result.content, /0 files shown from at least 3/);
 	assert.doesNotMatch(result.content, /Files\nnone/);
 });
+
+// Pi's registered fetch_content and the MCP core, over a fake gh, with the given web-search.json.
+async function fetchGitHubDocument(config) {
+	const root = await mkdtemp(join(tmpdir(), "pi-web-access-gh-retrieval-name-"));
+	const binDir = join(root, "bin");
+	await mkdir(binDir, { recursive: true });
+	await writeFile(join(root, "web-search.json"), JSON.stringify(config));
+	await writeFakeExecutable(binDir, "gh", `
+		const args = process.argv.slice(2);
+		if (args[0] === "--version") { console.log("gh version 2.0.0"); process.exit(0); }
+		if (args[0] === "pr" && args[1] === "view") {
+			const comments = Array.from({ length: 16 }, (_, index) => ({ id: index + 1, author: { login: "fixture" }, body: "comment " + index }));
+			const reviews = Array.from({ length: 11 }, (_, index) => ({ author: { login: "reviewer" + index }, state: "COMMENTED", body: "review " + index }));
+			console.log(JSON.stringify({ number: 7, title: "Retrieval names", state: "OPEN", author: { login: "alice" }, body: "BODY_PREFIX_" + "x".repeat(4100), comments, reviews }));
+			process.exit(0);
+		}
+		if (args[0] === "api") { console.log("[]"); process.exit(0); }
+		process.exit(1);
+	`);
+	const child = spawnSync(process.execPath, ["--input-type=module"], {
+		input: `
+			const { default: initialize } = await import(${JSON.stringify(new URL("../index.ts", import.meta.url).href)});
+			const { createStandaloneWebToolCore } = await import(${JSON.stringify(new URL("../web-tool-core.ts", import.meta.url).href)});
+			const tools = [];
+			initialize({ registerTool(tool) { tools.push(tool); }, registerCommand() {}, registerShortcut() {}, on() {}, appendEntry() {} });
+			const text = result => result.content.filter(item => item.type === "text").map(item => item.text).join("\\n");
+			const url = "https://github.com/owner/repo/pull/7";
+			const pi = await tools.find(tool => tool.name === "fetch_content").execute("fetch", { url });
+			const mcp = await createStandaloneWebToolCore().fetchContent({ url });
+			console.log(JSON.stringify({ pi: text(pi), mcp: text(mcp) }));
+		`,
+		encoding: "utf8",
+		env: { ...process.env, PATH: `${binDir}${delimiter}${process.env.PATH || ""}`, PI_CODING_AGENT_DIR: root, HOME: join(root, "home"), USERPROFILE: join(root, "home"), XDG_CONFIG_HOME: "" },
+	});
+	assert.equal(child.status, 0, child.stderr);
+	return JSON.parse(child.stdout.trim().split("\n").at(-1));
+}
+
+test("GitHub document hints name the renamed retrieval tool in Pi and keep the MCP name", async () => {
+	const { pi, mcp } = await fetchGitHubDocument({ toolNames: { getSearchContent: "grab_content" } });
+	assert.doesNotMatch(pi, /get_search_content/);
+	assert.match(pi, /\[body truncated; use grab_content findText or offset for the full text\]/);
+	assert.match(pi, /\[15 of 16 comments shown; use grab_content findText or offset, or gh issue view -c\]/);
+	assert.match(pi, /\[10 of 11 review verdicts shown; use grab_content offset or the gh command below for more\]/);
+	assert.match(pi, /Stored full document: use `grab_content`/);
+	assert.match(mcp, /\[body truncated; use get_search_content findText or offset for the full text\]/);
+	assert.match(mcp, /Stored full document: use `get_search_content`/);
+	assert.doesNotMatch(mcp, /grab_content/);
+});
+
+test("GitHub document hints point only at gh when retrieval is disabled", async () => {
+	const { pi, mcp } = await fetchGitHubDocument({ tools: { getSearchContent: { enabled: false } } });
+	for (const text of [pi, mcp]) {
+		assert.doesNotMatch(text, /get_search_content|Stored full document/);
+		assert.match(text, /\[body truncated; use the gh escalation commands below for the full text\]/);
+		assert.match(text, /\[15 of 16 comments shown; use gh issue view -c\]/);
+		assert.match(text, /\[10 of 11 review verdicts shown; use the gh command below for more\]/);
+		assert.match(text, /Full view: `gh pr view 7 --repo owner\/repo`/);
+	}
+});

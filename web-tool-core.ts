@@ -553,11 +553,12 @@ export interface WebToolCoreInstance extends WebToolCore {
 	buildSearchReturn(opts: SearchReturnOptions): WebToolResult;
 }
 
-/** Names fetch failure guidance may point at: only tools registered this session. */
+/** Names fetch guidance may point at: only tools registered this session. */
 export function registeredFetchToolNames(settings: WebToolCoreSettings): NonNullable<ExtractOptions["toolNames"]> {
 	return {
 		...(settings.enabledTools.webSearch ? { webSearch: settings.toolNames.webSearch } : {}),
 		...(settings.enabledTools.fetchContent ? { fetchContent: settings.toolNames.fetchContent } : {}),
+		...(settings.enabledTools.getSearchContent ? { getSearchContent: settings.toolNames.getSearchContent } : {}),
 	};
 }
 
