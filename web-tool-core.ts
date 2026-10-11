@@ -1090,17 +1090,42 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 				};
 			}
 
-			let output = "## Fetched URLs\n\n";
-			for (const { url, title, content, error } of presentedResults) {
-				if (error) {
-					output += `- ${url}: Error - ${error}\n`;
-				} else {
-					output += `- ${title || url} (${content.length} chars)\n`;
+			let output: string;
+			if (mode === "answer") {
+				// Answers are generated, not stored, so they must be visible here; the
+				// stored responseId only reaches the original source pages.
+				let budget = getMaxInlineContentChars();
+				output = "## Page answers\n";
+				for (const { url, title, content, error } of presentedResults) {
+					if (error) {
+						output += `\n### ${url}\nError: ${error}\n`;
+						continue;
+					}
+					const shown = content.slice(0, budget);
+					budget -= shown.length;
+					const marker = shown.length === content.length
+						? ""
+						: shown.length === 0
+							? "\n[answer omitted; earlier answers used the output limit, fetch fewer URLs per call for complete answers]"
+							: "\n[answer truncated at the output limit; fetch fewer URLs per call for complete answers]";
+					output += `\n### ${title || url}\n${shown}${marker}\n`;
+				}
+			} else {
+				output = "## Fetched URLs\n\n";
+				for (const { url, title, content, error } of presentedResults) {
+					if (error) {
+						output += `- ${url}: Error - ${error}\n`;
+					} else {
+						output += `- ${title || url} (${content.length} chars)\n`;
+					}
 				}
 			}
+			const retrievalHint = mode === "answer"
+				? `Stored content is the original source pages, not the answers. Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: 0 }) to read the first source; urlIndex follows the order above.`
+				: `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`;
 			output += storedContent
 				? getSearchContentEnabled
-					? `\n---\nUse ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`
+					? `\n---\n${retrievalHint}`
 					: "\n---\nContent retrieval is not registered."
 				: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
 
