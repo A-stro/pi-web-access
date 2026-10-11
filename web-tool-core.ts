@@ -1103,7 +1103,11 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 					}
 					const shown = content.slice(0, budget);
 					budget -= shown.length;
-					const marker = shown.length < content.length ? "\n[answer truncated at the output limit; fetch fewer URLs per call for complete answers]" : "";
+					const marker = shown.length === content.length
+						? ""
+						: shown.length === 0
+							? "\n[answer omitted; earlier answers used the output limit, fetch fewer URLs per call for complete answers]"
+							: "\n[answer truncated at the output limit; fetch fewer URLs per call for complete answers]";
 					output += `\n### ${title || url}\n${shown}${marker}\n`;
 				}
 			} else {
