@@ -112,6 +112,22 @@ test("renderer marks truncated review verdicts", async () => {
 	assert.match(result.content, /10 of 11 review verdicts shown/);
 });
 
+test("renderer cuts a long body at a word boundary so each word stays searchable", async () => {
+	const { renderGitHubPrIssue } = await import(moduleUrl);
+	const result = renderGitHubPrIssue({
+		url: "https://github.com/owner/repo/issues/7",
+		owner: "owner",
+		repo: "repo",
+		kind: "issue",
+		number: 7,
+		reviewThreads: [],
+		fallbackNotes: [],
+		view: { number: 7, title: "Boundary", state: "OPEN", author: { login: "alice" }, body: `${"word ".repeat(799)}BOUNDARY_TOKEN tail` },
+	});
+
+	assert.equal(result.content.split("BOUNDARY_TOKEN").length - 1, 1);
+});
+
 test("extractGitHubIssuePr retries gh view with core fields on unknown --json field", async () => {
 	const root = await mkdtemp(join(tmpdir(), "pi-web-access-gh-pr-"));
 	const binDir = join(root, "bin");

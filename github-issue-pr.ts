@@ -430,8 +430,11 @@ function milestoneTitle(value: unknown): string {
 // unit of text appears once in the document, so the stored document is complete.
 function truncateText(text: string, limit: number, label: string, appendix: string[], tool: string | null): string {
 	if (text.length <= limit) return text;
-	appendix.push(`## ${label} (continued)\n\n${text.slice(limit)}`);
-	return `${text.slice(0, limit)}\n\n[${label} truncated; ${tool ? `the rest is stored under "${label} (continued)": use ${tool} findText or offset` : "use the gh escalation commands below for the rest"}]`;
+	// Cut at a word boundary near the limit so a search for one word still matches.
+	const lastSpace = text.slice(0, limit + 1).search(/\s\S*$/);
+	const cut = lastSpace > limit * 0.8 ? lastSpace : limit;
+	appendix.push(`## ${label} (continued)\n\n${text.slice(cut)}`);
+	return `${text.slice(0, cut)}\n\n[${label} truncated; ${tool ? `the rest is stored under "${label} (continued)": use ${tool} findText or offset` : "use the gh escalation commands below for the rest"}]`;
 }
 
 function storeOmitted(appendix: string[], section: string, items: string[]): void {
