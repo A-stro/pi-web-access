@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Single-URL fetches and completed search summaries now include model-visible storage IDs and retrieval calls, so stored content remains reachable without access to host metadata. Guidance uses the configured retrieval tool name, respects disabled retrieval, and leaves raw bodies and approved summary text unchanged. Thanks to [@mothieras](https://github.com/mothieras) for [issue #548](https://github.com/nicobailon/pi-web-access/issues/548) and [PR #551](https://github.com/nicobailon/pi-web-access/pull/551).
+- Truncated `fetch_content` answers now clarify that stored content is the original source, not the remaining answer, and offer source retrieval from offset zero instead of an answer offset. Thanks to [@mothieras](https://github.com/mothieras) for [issue #550](https://github.com/nicobailon/pi-web-access/issues/550) and [PR #552](https://github.com/nicobailon/pi-web-access/pull/552).
 
 ## [0.38.0] - 2026-10-09
 

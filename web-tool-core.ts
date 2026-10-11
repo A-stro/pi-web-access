@@ -1030,9 +1030,14 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 
 				if (truncated) {
 					output += `\n\n---\nShowing ${slice.endOffset} of ${fullLength} chars, ${slice.shownBytes} of ${slice.totalBytes} bytes, and ${slice.shownLines} of ${slice.totalLines} lines. `;
+					if (mode === "answer") {
+						output += "Answer output is truncated. Stored content is the original source, not the remaining answer. ";
+					}
 					output += storedContent
 						? getSearchContentEnabled
-							? `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: ${slice.endOffset} }) for the next slice.`
+							? mode === "answer"
+								? `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: 0 }) to read the original source from the beginning.`
+								: `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: ${slice.endOffset} }) for the next slice.`
 							: "Content retrieval is not registered."
 						: "Authenticated fetch cache is off; repeat the fetch to read more.";
 				}
