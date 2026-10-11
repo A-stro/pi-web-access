@@ -1106,11 +1106,6 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 					const marker = shown.length < content.length ? "\n[answer truncated at the output limit; fetch fewer URLs per call for complete answers]" : "";
 					output += `\n### ${title || url}\n${shown}${marker}\n`;
 				}
-				output += storedContent
-					? getSearchContentEnabled
-						? `\n---\nStored content is the original source pages, not the answers. Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: 0 }) to read the first source; urlIndex follows the order above.`
-						: "\n---\nContent retrieval is not registered."
-					: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
 			} else {
 				output = "## Fetched URLs\n\n";
 				for (const { url, title, content, error } of presentedResults) {
@@ -1120,12 +1115,15 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 						output += `- ${title || url} (${content.length} chars)\n`;
 					}
 				}
-				output += storedContent
-					? getSearchContentEnabled
-						? `\n---\nUse ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`
-						: "\n---\nContent retrieval is not registered."
-					: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
 			}
+			const retrievalHint = mode === "answer"
+				? `Stored content is the original source pages, not the answers. Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: 0 }) to read the first source; urlIndex follows the order above.`
+				: `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`;
+			output += storedContent
+				? getSearchContentEnabled
+					? `\n---\n${retrievalHint}`
+					: "\n---\nContent retrieval is not registered."
+				: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
 
 			return {
 				...(successful === 0 ? { isError: true } : {}),
