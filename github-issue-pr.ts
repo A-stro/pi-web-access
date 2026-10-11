@@ -489,12 +489,6 @@ function renderComments(comments: Record<string, unknown>[], anchor: string | un
 	return lines;
 }
 
-function renderCommentMarker(comments: Record<string, unknown>[], renderedCount: number, total: unknown, tool: string | null): string | null {
-	const knownTotal = numberValue(total);
-	const atLeast = knownTotal !== null && knownTotal > comments.length ? knownTotal : null;
-	return omissionMarker("Conversation comments", "comments", renderedCount, comments.length, atLeast, tool, "gh issue view -c");
-}
-
 function commentCountText(view: Record<string, unknown>): string {
 	const comments = objectArray(view.comments).length;
 	const total = numberValue(view.commentsCount);
@@ -651,8 +645,10 @@ export function renderGitHubPrIssue(data: RenderData): ExtractedContent {
 		appendLimitedSection(lines, "Closed by pull requests", renderLinkedOrUnavailable(view, "closedByPullRequestsReferences", "closedBy"), 20, "pull requests", appendix, tool);
 	}
 	lines.push("## Conversation comments");
-	const commentLines = renderComments(objectArray(view.comments), data.anchor, appendix, tool);
-	const commentMarker = renderCommentMarker(objectArray(view.comments), commentLines.length, view.commentsCount, tool);
+	const comments = objectArray(view.comments);
+	const commentLines = renderComments(comments, data.anchor, appendix, tool);
+	const knownCommentTotal = numberValue(view.commentsCount);
+	const commentMarker = omissionMarker("Conversation comments", "comments", commentLines.length, comments.length, knownCommentTotal !== null && knownCommentTotal > comments.length ? knownCommentTotal : null, tool, "gh issue view -c");
 	if (commentMarker) commentLines.push(commentMarker);
 	if (view.anchorUnavailable === true && data.anchor?.startsWith("issuecomment-")) commentLines.push("[anchored comment unavailable for this issue or pull request]");
 	lines.push(...(commentLines.length > 0 ? commentLines : ["none"]), "");
