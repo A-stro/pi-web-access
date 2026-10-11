@@ -9,10 +9,11 @@ const indexUrl = new URL("../index.ts", import.meta.url).href;
 const sources = {
 	"http://93.184.216.34/a": "SOURCE_A " + "p".repeat(190),
 	"http://93.184.216.34/b": "SOURCE_B " + "q".repeat(190),
+	"http://93.184.216.34/c": "SOURCE_C " + "r".repeat(190),
 };
-const answers = { SOURCE_A: "ANSWER_A short and complete.", SOURCE_B: "ANSWER_B_" + "b".repeat(1800) };
+const answers = { SOURCE_A: "ANSWER_A short and complete.", SOURCE_B: "ANSWER_B_" + "b".repeat(1800), SOURCE_C: "ANSWER_C never shown." };
 
-// Two URLs with a 1,000-char inline cap: answer A fits, answer B must be cut.
+// Three URLs with a 1,000-char inline cap: answer A fits, B is cut, C has no room left.
 function runFixture({ mode = "answer", config = {} } = {}) {
 	const root = mkdtempSync(join(tmpdir(), "pi-fetch-multi-answer-"));
 	const agent = join(root, "agent");
@@ -41,7 +42,7 @@ function runFixture({ mode = "answer", config = {} } = {}) {
 					getApiKeyAndHeaders: async () => ({ ok: true, apiKey: 'fixture-key' }),
 					complete: async (_model, context) => {
 						const input = context.messages[0].content[0].text;
-						const text = input.includes('SOURCE_A') ? answers.SOURCE_A : answers.SOURCE_B;
+						const text = answers[Object.keys(answers).find(key => input.includes(key))];
 						return { stopReason: 'stop', content: [{ type: 'text', text }] };
 					},
 				} };
@@ -51,7 +52,7 @@ function runFixture({ mode = "answer", config = {} } = {}) {
 				const text = result.content.map(c => c.text).join('\\n');
 				const match = text.match(/([\\w-]+)\\(\\{ responseId: "([^"]+)", urlIndex: (\\d+)(?:, offset: (\\d+))? \\}\\)/);
 				const tool = match && tools.find(t => t.name === match[1]);
-				const retrieved = tool ? await tool.execute('visible-call', { responseId: match[2], urlIndex: Number(match[3]) }) : null;
+				const retrieved = tool ? await tool.execute('visible-call', { responseId: match[2], urlIndex: Number(match[3]), ...(match[4] ? { offset: Number(match[4]) } : {}) }) : null;
 				console.log(JSON.stringify({ result, text, retrieved }));
 			`,
 			encoding: "utf8", timeout: 20_000,
@@ -70,8 +71,10 @@ test("multi-URL answers are visible, bounded, and the stored ID points at the so
 	const shownB = 1000 - answers.SOURCE_A.length;
 	assert.ok(text.includes(`${answers.SOURCE_B.slice(0, shownB)}\n[answer truncated at the output limit`));
 	assert.ok(!text.includes(answers.SOURCE_B.slice(0, shownB + 1)));
+	assert.match(text, /\n### c\n\n\[answer omitted; earlier answers used the output limit/);
+	assert.ok(!text.includes(answers.SOURCE_C));
 	assert.match(text, /Stored content is the original source pages, not the answers/);
-	assert.deepEqual(result.structuredContent.urls.map(u => u.content), [answers.SOURCE_A, answers.SOURCE_B]);
+	assert.deepEqual(result.structuredContent.urls.map(u => u.content), [answers.SOURCE_A, answers.SOURCE_B, answers.SOURCE_C]);
 	assert.equal(retrieved.details.error, undefined);
 	assert.match(retrieved.content[0].text, /SOURCE_A p+/);
 	assert.doesNotMatch(retrieved.content[0].text, /ANSWER_/);
