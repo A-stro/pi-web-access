@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-11
+
+### Highlights
+
+- Convert PDFs with a document parser you run yourself, with no API key and no per-page cost.
+- Search summaries now read each source's snippet, so providers that return only links still get a real summary.
+- Answer mode with several URLs shows every page's answer, and stored pages are easier to find again.
+- Search is less fragile: stalled Perplexity requests time out, empty results move `auto` on to the next provider, and DuckDuckGo bot checks are reported as such.
+- GitHub pull request and issue fetches no longer repeat long text, and Brave results no longer show leftover HTML.
+
 ### Added
 
 - PDFs can be converted by a document parser you run yourself. Set `pdf.provider: "endpoint"` and `pdf.endpointUrl`, and `fetch_content` sends the PDF to that service and uses the Markdown it returns, with no API key or per-page cost. In `auto`, a configured endpoint is tried before Datalab, Gemini and the built-in parser, and a failed request falls back to them. The URL passes the same SSRF checks as other fetches, so a LAN host needs its range in `ssrf.allowRanges`. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #553](https://github.com/nicobailon/pi-web-access/pull/553).
