@@ -4,17 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-12
+
+### Highlights
+
+- Keep page fetches on the site you asked for: an opt-in policy refuses any redirect to another origin before that site is contacted.
+- With a Gemini gateway configured, video uploads now go through the gateway instead of straight to Google with your gateway key.
+- Asking a question about a YouTube or local video works again when a thumbnail comes back with the transcript.
+- Emoji and other special characters no longer get cut in half at the edge of an excerpt or a page.
+
 ### Added
 
-- Opt-in same-origin redirect policy for page fetches. Set `fetchContent.redirects: "same-origin"` in config, or pass `redirects: "same-origin"` to one `fetch_content` call, and every redirect must stay on the requested URL's scheme, hostname and port. A redirect that leaves it is refused before the new target is contacted, with no page content and no fallback to another provider. Extraction paths that fetch on their own (Jina Reader, hosted providers, Gemini, GitHub and YouTube integrations) are disabled while the policy is on. Thanks to [@jordan-droverinsights](https://github.com/jordan-droverinsights) for [issue #560](https://github.com/nicobailon/pi-web-access/issues/560).
+- An opt-in same-origin redirect policy for page fetches. Turn it on for every fetch with `fetchContent.redirects: "same-origin"` in config, or for one call by passing `redirects: "same-origin"` to `fetch_content`. Every redirect must then stay on the requested URL's scheme, hostname and port. A redirect that leaves is refused before the new site is contacted, with no page content and no fallback to another provider. While the policy is on, extraction paths that fetch pages themselves (Jina Reader, hosted providers, Gemini, and the GitHub and YouTube integrations) are turned off. Thanks to [@jordan-droverinsights](https://github.com/jordan-droverinsights) for [issue #560](https://github.com/nicobailon/pi-web-access/issues/560).
 
 ### Fixed
 
-- With `geminiBaseUrl` pointing at a gateway, video uploads to the Gemini Files API now send the file bytes through the gateway too. Previously the upload URL Google returned sent the bytes, along with the gateway credential, straight to `generativelanguage.googleapis.com`. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #561](https://github.com/nicobailon/pi-web-access/pull/561).
-- `fetch_content` answer mode now answers YouTube and local-video analyses that come with a thumbnail, instead of rejecting them with "Page answer requires textual fetched content". Multi-frame results are now refused rather than answered from their "N frames extracted" placeholder. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #562](https://github.com/nicobailon/pi-web-access/pull/562).
-- `get_search_content` `findText` excerpts no longer cut an emoji in half at an excerpt edge. A split half is replaced with U+FFFD, so excerpts stay valid text and keep their reported lengths. Thanks to [@yazanabuashour](https://github.com/yazanabuashour) for [PR #563](https://github.com/nicobailon/pi-web-access/pull/563).
-- Paging through stored content with `fetch_content` and `get_search_content` no longer cuts an emoji in half at a page boundary. The whole character moves to the next page, and the advertised next offset matches ([#564](https://github.com/nicobailon/pi-web-access/issues/564)).
-
+- With `geminiBaseUrl` pointing at a gateway, video uploads to the Gemini Files API now go through the gateway. Before, the file was sent to `generativelanguage.googleapis.com` directly, along with the gateway key. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #561](https://github.com/nicobailon/pi-web-access/pull/561).
+- `fetch_content` answer mode now answers from a YouTube or local-video transcript that comes with a thumbnail, instead of failing with "Page answer requires textual fetched content". Requests for several video frames are refused in answer mode instead of being answered from a placeholder line. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #562](https://github.com/nicobailon/pi-web-access/pull/562).
+- `get_search_content` `findText` excerpts no longer end in half an emoji. A character split at the excerpt edge shows as `�`, so the text stays valid. Thanks to [@yazanabuashour](https://github.com/yazanabuashour) for [PR #563](https://github.com/nicobailon/pi-web-access/pull/563).
+- Reading stored content page by page with `fetch_content` and `get_search_content` no longer splits an emoji across two pages. The whole character starts the next page, and the next-page offset points to it ([#564](https://github.com/nicobailon/pi-web-access/issues/564)).
 ## [0.39.0] - 2026-10-11
 
 ### Highlights
