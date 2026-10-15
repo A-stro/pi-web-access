@@ -88,6 +88,17 @@ export function loadFetchContentRedirectPolicy(): RedirectPolicy | undefined {
 	return redirects;
 }
 
+const DEFAULT_FETCH_CONTENT_USER_AGENT = "OpenAI File Downloader, XaiImageApiFetch/1.0";
+
+export function loadFetchContentUserAgent(): string {
+	const userAgent = loadFetchContentConfig()?.userAgent;
+	if (userAgent === undefined || userAgent === null) return DEFAULT_FETCH_CONTENT_USER_AGENT;
+	if (typeof userAgent !== "string" || userAgent.trim().length === 0 || !/^[\t\x20-\x7e]+$/.test(userAgent)) {
+		throw new Error(`fetchContent.userAgent in ${WEB_SEARCH_CONFIG_PATH} must be a non-empty string of printable ASCII characters`);
+	}
+	return userAgent.trim();
+}
+
 export function loadFetchContentDomainPolicy(): DomainPolicy {
 	const policy = loadFetchContentConfig()?.domainPolicy;
 	if (policy === undefined || policy === null) return { ...DEFAULT_DOMAIN_POLICY };
