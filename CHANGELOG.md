@@ -4,13 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-14
+
+### Highlights
+
+- Sites that turn away AI fetchers can now be read directly: set your own User-Agent for page fetches.
+- A SearXNG instance on your own machine works without opening every local service to page fetches.
+- A bad User-Agent setting fails with a clear config error and never sends the page to another provider.
+
 ### Added
 
-- `fetchContent.userAgent` in `web-search.json` sets the `User-Agent` of the extension's own page fetch, for sites that reject the default `OpenAI File Downloader, XaiImageApiFetch/1.0`, such as some Australian government sites. Leaving it unset keeps the default. Thanks to [@r1ckyIn](https://github.com/r1ckyIn) for [issue #568](https://github.com/nicobailon/pi-web-access/issues/568).
+- Set `fetchContent.userAgent` in `web-search.json` to choose the `User-Agent` sent on page fetches. Use it for sites that reject the default `OpenAI File Downloader, XaiImageApiFetch/1.0`, such as some Australian government sites. Leaving it unset keeps the default. A value that is empty or not printable ASCII fails with a config error before anything is fetched. Thanks to [@r1ckyIn](https://github.com/r1ckyIn) for [issue #568](https://github.com/nicobailon/pi-web-access/issues/568).
 
 ### Fixed
 
-- A SearXNG instance on the same machine (`searxngBaseUrl` on `localhost`, `127.0.0.0/8`, or `::1`) now works without adding loopback to `ssrf.allowRanges`, which also opened every local service to `fetch_content`. The exemption covers only the configured origin, so a redirect to another local service is still blocked. Thanks to [@mikeydiamonds](https://github.com/mikeydiamonds) for [PR #569](https://github.com/nicobailon/pi-web-access/pull/569).
+- A SearXNG instance on the same machine (`searxngBaseUrl` on `localhost`, `127.0.0.0/8`, or `::1`) now works without adding loopback to `ssrf.allowRanges`. That workaround also let `fetch_content` reach every local service. Only the configured SearXNG address is allowed, so a redirect to another local service is still blocked. Thanks to [@mikeydiamonds](https://github.com/mikeydiamonds) for [PR #569](https://github.com/nicobailon/pi-web-access/pull/569).
 
 ## [0.40.0] - 2026-10-12
 
