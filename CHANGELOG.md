@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- A SearXNG instance on the same machine (`searxngBaseUrl` on `localhost`, `127.0.0.0/8`, or `::1`) now works without adding loopback to `ssrf.allowRanges`, which also opened every local service to `fetch_content`. The exemption covers only the configured origin, so a redirect to another local service is still blocked. Thanks to [@mikeydiamonds](https://github.com/mikeydiamonds) for [PR #569](https://github.com/nicobailon/pi-web-access/pull/569).
+
 ## [0.40.0] - 2026-10-12
 
 ### Highlights
