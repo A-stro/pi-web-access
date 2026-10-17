@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - `geminiAuth: "adc"` now falls back to the Google Compute Engine metadata server when neither `GOOGLE_APPLICATION_CREDENTIALS` nor `~/.config/gcloud/application_default_credentials.json` is present and Pi runs on Google Compute Engine, using the attached service account token (`GCE_METADATA_HOST` overrides the host; `METADATA_SERVER_DETECTION=none` disables detection). Thanks to [@sergiopadure](https://github.com/sergiopadure) for #572.
+- Set `"toolExposure": "deferred"` in `web-search.json` to keep the four web tools off every request until `web_enable` or Pi's `tool_search` loads them. It implies dynamic activation and can't be combined with `"toolActivation": "eager"`. The default, `"direct"`, is unchanged. Thanks to [@hannonpi1228](https://github.com/hannonpi1228) for #575 and #576.
 
 ### Fixed
 
