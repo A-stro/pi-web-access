@@ -4,16 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-17
+
+### Highlights
+
+- Search with DeepSeek: a new provider for DeepSeek's own Search API, used when you pick it.
+- Page answers and search summaries now work when your selected model is a Pi virtual model, such as a router.
+- Gemini can sign in on Google Compute Engine with the machine's attached service account, with no credentials file.
+- `!command` API key sources work on Windows the way they do in Pi itself, so commands like `$HOME/bin/secret-get` run.
+- An opt-in setting keeps the web tools off every request until they're needed and lets Pi's `tool_search` find them.
+
 ### Added
 
-- `geminiAuth: "adc"` now falls back to the Google Compute Engine metadata server when neither `GOOGLE_APPLICATION_CREDENTIALS` nor `~/.config/gcloud/application_default_credentials.json` is present and Pi runs on Google Compute Engine, using the attached service account token (`GCE_METADATA_HOST` overrides the host; `METADATA_SERVER_DETECTION=none` disables detection). Thanks to [@sergiopadure](https://github.com/sergiopadure) for #572.
-- New DeepSeek search provider for DeepSeek's [Search API](https://api-docs.deepseek.com/guides/search), used only when you select it. Set `deepseekApiKey` or `DEEPSEEK_API_KEY` to your DeepSeek API key. The API is billed per successful request, so it is never picked by `auto` or `all`. Allowed and excluded domains become `site:` and `-site:` filters in the query, and `recencyFilter` becomes an `after:` date. DeepSeek limits a query to 128 characters including those filters, so a longer one fails before any request is sent. Thanks to [@syxb2](https://github.com/syxb2) for #577 and [@Lang646](https://github.com/Lang646) for the API details on #119.
-- Set `"toolExposure": "deferred"` in `web-search.json` to keep the four web tools off every request until `web_enable` or Pi's `tool_search` loads them. It implies dynamic activation and can't be combined with `"toolActivation": "eager"`. The default, `"direct"`, is unchanged. Thanks to [@hannonpi1228](https://github.com/hannonpi1228) for #575 and #576.
+- DeepSeek search provider, backed by DeepSeek's [Search API](https://api-docs.deepseek.com/guides/search). Select `provider: "deepseek"` or add it to `searchRouting`, and set `deepseekApiKey` or `DEEPSEEK_API_KEY`. DeepSeek bills each successful search, so `auto` and `all` never use it. Allowed and excluded domains become `site:` and `-site:` filters, and `recencyFilter` becomes an `after:` date. DeepSeek accepts queries up to 128 characters including those filters, so a longer one fails before anything is sent. Thanks to [@syxb2](https://github.com/syxb2) for [issue #577](https://github.com/nicobailon/pi-web-access/issues/577) and [@Lang646](https://github.com/Lang646) for the API details on [issue #119](https://github.com/nicobailon/pi-web-access/issues/119).
+- `geminiAuth: "adc"` now works on Google Compute Engine with no credentials file. When neither `GOOGLE_APPLICATION_CREDENTIALS` nor `~/.config/gcloud/application_default_credentials.json` exists, it uses the token of the machine's attached service account. `GCE_METADATA_HOST` changes the metadata host, and `METADATA_SERVER_DETECTION=none` turns this off. Thanks to [@sergiopadure](https://github.com/sergiopadure) for [PR #572](https://github.com/nicobailon/pi-web-access/pull/572).
+- `"toolExposure": "deferred"` in `web-search.json` keeps `web_search`, `source_check`, `fetch_content`, and `get_search_content` off every request until `web_enable` or Pi's `tool_search` loads them. It always uses dynamic activation, so it can't be combined with `"toolActivation": "eager"`. The default, `"direct"`, works as before. Thanks to [@hannonpi1228](https://github.com/hannonpi1228) for [issue #575](https://github.com/nicobailon/pi-web-access/issues/575) and [PR #576](https://github.com/nicobailon/pi-web-access/pull/576).
 
 ### Fixed
 
-- `!command` credential sources now run in Git Bash on Windows (Git for Windows install locations, then `bash.exe` on `PATH`), matching Pi's own `!command` config values, so POSIX syntax such as `$HOME` works. Without a bash they still run in `cmd.exe`. Standard Windows variables such as `USERPROFILE` and `SystemRoot` now reach the command. Thanks to [@estrizhok](https://github.com/estrizhok) for #571.
-- `fetch_content` answer mode and search summaries now work with Pi virtual models (`pi.registerVirtualModel()`). They call Pi's provider-neutral `streamSimple`, which routes a virtual model to its physical model; before, answer mode failed with `Virtual model … must be routed before streaming` and summaries silently fell back to the deterministic text. Thanks to [@yansongda](https://github.com/yansongda) for #574.
+- `fetch_content` answer mode and search summaries work with Pi virtual models. Before, answer mode failed with `Virtual model … must be routed before streaming`, and summaries quietly fell back to the plain list of results. Thanks to [@yansongda](https://github.com/yansongda) for [issue #574](https://github.com/nicobailon/pi-web-access/issues/574).
+- On Windows, `!command` API key sources run in Git Bash (or `bash.exe` on `PATH`), as Pi's own `!command` settings do, so POSIX syntax like `$HOME` works. Without bash they still run in `cmd.exe`. Standard Windows variables such as `USERPROFILE` and `SystemRoot` now reach the command. Thanks to [@estrizhok](https://github.com/estrizhok) for [issue #571](https://github.com/nicobailon/pi-web-access/issues/571).
 
 ## [0.41.0] - 2026-10-14
 
