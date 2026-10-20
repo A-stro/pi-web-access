@@ -4,16 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-20
+
+### Highlights
+
+- Search with Linkup: a new provider that runs only when you pick it, since each search uses account credits.
+- DeepSeek search can return the full text of the pages it found, and DeepSeek Fetch can read pages for `fetch_content` when you opt in.
+- xAI search can go through your own Responses gateway, with a longer timeout for slow X searches.
+- A default provider list now falls back to your `searchRouting` providers when every provider in it fails.
+- Short, complete pages no longer come back from `fetch_content` marked "incomplete".
+
 ### Added
 
-- Optional Linkup search provider. Set `linkupApiKey` or `LINKUP_API_KEY` and select `provider: "linkup"`. Configure `linkupDepth` as `flash`, `fast` (default), `standard`, or `deep`. Supports result limits, domain filters, recency filters, and inline text content. Linkup is excluded from the built-in `auto` chain and `all` because searches consume account credits. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #584](https://github.com/nicobailon/pi-web-access/pull/584).
-- DeepSeek search now exposes native page content through `includeContent` by sending `need_content: true`, and DeepSeek Fetch is available as an opt-in `fetch_content` provider. Add `deepseek` to `fetchRouting.providers` and set `fetchRouting.allowRemoteHostedProviders` to `true`; it calls `POST https://api.deepseek.com/v1/tools/fetch` and returns Markdown, sharing `deepseekApiKey`/`DEEPSEEK_API_KEY` with search. Thanks to [@Jerry2003sky](https://github.com/Jerry2003sky) for [issue #582](https://github.com/nicobailon/pi-web-access/issues/582) and [@Ebotian](https://github.com/Ebotian) for [PR #585](https://github.com/nicobailon/pi-web-access/pull/585).
-- `xaiResponsesUrl` sends xAI search to another Responses endpoint, such as a gateway that relays `x_search` to a Grok subscription. Only `xaiApiKey` or `XAI_API_KEY` goes to that endpoint; Pi's xAI sign-in is never sent there. `xaiSearchTimeoutMs` raises the 60-second xAI request timeout, up to 10 minutes, for `x_search` questions that take longer. Thanks to [@zane668](https://github.com/zane668) for [issue #583](https://github.com/nicobailon/pi-web-access/issues/583).
+- Linkup search provider. Set `linkupApiKey` or `LINKUP_API_KEY` and select `provider: "linkup"`. `linkupDepth` picks `flash`, `fast` (default), `standard`, or `deep`. Result limits, domain and recency filters, and inline page text all work. Linkup is never chosen by `auto` or `all`, because searches use account credits. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #584](https://github.com/nicobailon/pi-web-access/pull/584).
+- DeepSeek search with `includeContent` now returns the page text DeepSeek already fetched, so those pages aren't fetched a second time. DeepSeek Fetch is a new opt-in `fetch_content` provider that returns pages as Markdown: add `deepseek` to `fetchRouting.providers` and set `fetchRouting.allowRemoteHostedProviders` to `true`. It uses the same `deepseekApiKey` / `DEEPSEEK_API_KEY` as search. Thanks to [@Jerry2003sky](https://github.com/Jerry2003sky) for [issue #582](https://github.com/nicobailon/pi-web-access/issues/582) and [@Ebotian](https://github.com/Ebotian) for [PR #585](https://github.com/nicobailon/pi-web-access/pull/585).
+- `xaiResponsesUrl` sends xAI search to another Responses endpoint, such as a gateway that relays `x_search` to a Grok subscription. Only `xaiApiKey` or `XAI_API_KEY` is sent there, never Pi's xAI sign-in. `xaiSearchTimeoutMs` raises the 60-second xAI timeout, up to 10 minutes, for `x_search` questions that take longer. Thanks to [@zane668](https://github.com/zane668) for [issue #583](https://github.com/nicobailon/pi-web-access/issues/583).
 
 ### Fixed
 
-- A default `provider` array now falls back to `searchRouting` when every provider in it fails. Before, setting `provider` turned routing off, so `["exa", "brave"]` with both down returned an error without trying the routing list. The fallback starts only when each array failure is a `fallbackOn` type, and skips providers the array already tried. An array passed in a tool call stays strict. Thanks to [@isjiajia01](https://github.com/isjiajia01) for #580.
-- `fetch_content` in readable mode returns a complete short page instead of reporting it as incomplete. A static page whose whole visible text is under 500 characters is accepted once something is extracted from it; pages that run scripts still fall through to other providers, since their short text may be a loading placeholder. When content still looks incomplete, the error now says how many characters were extracted from how much visible text on the page. Thanks to [@donnielrt](https://github.com/donnielrt) for #581.
+- A default `provider` list such as `["exa", "brave"]` now falls back to `searchRouting` when every provider in it fails. Before, setting `provider` switched routing off, so the search just errored. Fallback happens only when each failure is one of your `fallbackOn` types, and it skips providers the list already tried. This covers tool calls, the curator, and `/websearch`; a list passed in a single tool call still doesn't fall back. Thanks to [@isjiajia01](https://github.com/isjiajia01) for [issue #580](https://github.com/nicobailon/pi-web-access/issues/580).
+- `fetch_content` in readable mode returns a complete short page instead of calling it incomplete. A static page with under 500 characters of visible text is accepted once something is extracted from it. Pages that run scripts still try other providers, because their short text may be a loading placeholder. When a page still looks incomplete, the error says how much text was extracted and how much the page shows. Thanks to [@donnielrt](https://github.com/donnielrt) for [issue #581](https://github.com/nicobailon/pi-web-access/issues/581).
 
 ## [0.42.0] - 2026-10-17
 
