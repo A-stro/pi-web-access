@@ -4,10 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-20
+
+### Highlights
+
+- Send most search providers through your own API gateway or proxy, using a config key or an environment variable per provider.
+- API keys are removed when a provider redirects a request to a different site.
+- If you use Pi's `codemode` or `tool_search`, the web tools can now add nothing to your context until a script actually calls one.
+
 ### Added
 
-- `"toolActivation": "none"` with `"toolExposure": "deferred"` drops `web_enable`, so the web tools are reached only from Pi `codemode` scripts or `tool_search` and cost no tool declarations until a script calls them. It requires deferred exposure. The other `toolActivation` values work as before. Thanks to [@johnhenaot](https://github.com/johnhenaot) for [PR #591](https://github.com/nicobailon/pi-web-access/pull/591).
-- API base URL overrides for Parallel, Serper, SerpApi, Perplexity, DeepSeek, Ollama, Jina search, Mistral Conversations, and the other single-root HTTP providers listed in the README's gateway table, so their requests can go through a compatible gateway. Each provider has a `<provider>BaseUrl` config key and an environment variable that takes precedence; Ollama and DeepSeek use `PI_OLLAMA_BASE_URL` and `PI_DEEPSEEK_BASE_URL`, because the bare names are commonly set for other tools. Gateway path prefixes are kept, official endpoints stay the default, and cross-origin redirects drop credential headers and the `api_key` query parameter. Jina search now rejects the queries `.` and `..`, which would otherwise escape a gateway path. Thanks to [@XWIlluDelu](https://github.com/XWIlluDelu) for [PR #590](https://github.com/nicobailon/pi-web-access/pull/590).
+- Gateway support for Parallel, Serper, SerpApi, Perplexity, DeepSeek, Ollama, Jina search, Mistral, and the other providers listed in the README's gateway table. Set `<provider>BaseUrl` in config, or the matching environment variable, which wins over config. Ollama and DeepSeek read `PI_OLLAMA_BASE_URL` and `PI_DEEPSEEK_BASE_URL`, because the plain names are often already set for a local Ollama server or other DeepSeek clients. Any path prefix on your gateway URL is kept, and the official endpoints stay the default. When a provider redirects to a different site, API key headers and the `api_key` query parameter are dropped. Thanks to [@XWIlluDelu](https://github.com/XWIlluDelu) for [PR #590](https://github.com/nicobailon/pi-web-access/pull/590).
+- `"toolActivation": "none"` removes the `web_enable` loader, so the web tools are reached only from Pi `codemode` scripts or `tool_search` and add no tool definitions until a script calls one. It only works with `"toolExposure": "deferred"`, and it needs `codemode` or `tool_search` turned on in Pi. The other `toolActivation` values work as before. Thanks to [@johnhenaot](https://github.com/johnhenaot) for [PR #591](https://github.com/nicobailon/pi-web-access/pull/591).
+
+### Changed
+
+- Jina search rejects the queries `.` and `..`, which would otherwise escape a gateway's path. Provider API calls follow at most 5 redirects.
 
 ## [0.43.0] - 2026-10-20
 
