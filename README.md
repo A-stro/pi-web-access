@@ -1087,6 +1087,7 @@ Enabling the tools mid-conversation can cost a prompt-cache miss. Some models ac
 - `"auto"` (the default) uses dynamic activation when the session's model accepts added tools, according to Pi's model catalog. Otherwise every enabled web tool is available from the first request, so `web_enable` never causes that cache miss. The choice is made once, from the model selected when a new session starts; switching models later doesn't change it, and warm or resumed sessions keep their recorded tools.
 - `"dynamic"` starts every new session with `web_enable`, even on models where enabling the tools can cause a cache miss.
 - `"eager"` never uses `web_enable` and keeps every enabled web tool available from the first request. It also suits models that rarely call `web_enable` on their own.
+- `"none"` never registers `web_enable` and declares no web tool. It requires `"toolExposure": "deferred"`, described below.
 
 Restart Pi after changing it. Dynamic activation needs Pi 0.86.0 or newer; older Pi logs a warning and keeps every enabled web tool available.
 
@@ -1098,7 +1099,16 @@ Restart Pi after changing it. Dynamic activation needs Pi 0.86.0 or newer; older
 }
 ```
 
-Deferred exposure always uses dynamic activation, so it can't be combined with `"toolActivation": "eager"`. The default is `"direct"`. Restart Pi after changing it. It is not a guaranteed saving: loading the tools later can cost the cache miss described above, and finding them through `tool_search` takes an extra model turn.
+Deferred exposure can't be combined with `"toolActivation": "eager"`. The default is `"direct"`. Restart Pi after changing it. It is not a guaranteed saving: loading the tools later can cost the cache miss described above, and finding them through `tool_search` takes an extra model turn.
+
+`"toolActivation": "none"` also drops `web_enable`. The model then reaches the web tools only through `tool_search` or `codemode` scripts, which find them with `searchTools()` and get [structured results](#in-codemode-scripts), so only what a script returns enters the conversation. Enable one of them in Pi's settings first, for example `"defaultTools": ["+codemode"]`.
+
+```json
+{
+  "toolExposure": "deferred",
+  "toolActivation": "none"
+}
+```
 
 ### Shortcuts
 
