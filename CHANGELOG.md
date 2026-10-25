@@ -17,6 +17,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- The web tools now add about 1,100 tokens to every request to the model instead of about 2,800: the definitions of `web_search`, `source_check`, `fetch_content`, and `get_search_content` shrank from about 11,000 to about 4,400 characters. Every parameter is still there; the longer explanations moved to the README ([#595](https://github.com/nicobailon/pi-web-access/issues/595)).
+- The `provider` argument of `web_search` and `source_check` is now a plain string. To search several providers at once, pass comma-separated names such as `"brave,exa"` instead of a list. An unknown name now returns an error that lists the valid names, instead of quietly using automatic selection. The `provider` setting in `web-search.json`, including lists, works as before ([#595](https://github.com/nicobailon/pi-web-access/issues/595)).
 - When `summaryModel` is set, summaries use only that model. Before, if it was missing, signed out, or failed, the summary quietly switched to a built-in cloud model such as Claude Haiku, which could bill a provider you did not choose. Now you get the plain summary built from the search results, with the reason it failed, and the curator preselects your model even when it is unavailable. If `summaryModel` is not set, nothing changes. Thanks to [@Meetsch](https://github.com/Meetsch) for [issue #597](https://github.com/nicobailon/pi-web-access/issues/597).
 
 ### Fixed

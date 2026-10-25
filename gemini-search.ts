@@ -277,20 +277,53 @@ export function normalizeSearchProviderSelection(value: unknown, label = "provid
 	return SEARCH_PROVIDERS.includes(normalized as SearchProvider) ? normalized as SearchProvider : "auto";
 }
 
+/** Strict parser for tool-call `provider` arguments; config values keep the lenient normalizer. */
+export function parseProviderArgument(value: unknown): SearchProviderSelection | undefined {
+	if (value === undefined) return undefined;
+	if (Array.isArray(value)) return normalizeResolvedProviderList(value, "provider");
+	const unknown = (name: string) => new Error(`Unknown search provider "${name}". Use auto, all, or one or more comma-separated names: ${getAllowedSearchProviders().join(", ")}`);
+	if (typeof value !== "string") throw unknown(String(value));
+	const normalized = value.trim().toLowerCase();
+	if (normalized === "") return undefined;
+	let names: string[];
+	if (normalized.startsWith("[")) {
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(normalized);
+		} catch {
+			throw new Error("provider must be a provider name or comma-separated names; the given value is not valid JSON");
+		}
+		if (!Array.isArray(parsed) || parsed.length === 0) return normalizeResolvedProviderList(parsed, "provider");
+		names = parsed.map(entry => String(entry).trim());
+	} else {
+		names = normalized.split(",").map(name => name.trim()).filter(Boolean);
+		if (names.length < 2) {
+			if (!SEARCH_PROVIDERS.includes(names[0] as SearchProvider)) throw unknown(names[0] ?? value);
+			return names[0] as SearchProvider;
+		}
+	}
+	if (names.some(name => name === "auto" || name === "all")) {
+		throw new Error('Search providers "auto" and "all" can\'t be combined with other names; pass one of them alone, or list only provider names');
+	}
+	const invalid = names.find(name => !RESOLVED_SEARCH_PROVIDERS.includes(name as ResolvedSearchProvider));
+	if (invalid !== undefined) throw unknown(invalid);
+	return normalizeResolvedProviderList(names, "provider");
+}
+
 /** Validate the original arguments, before config can supply an implicit provider. */
 export function validateSearchModelOverride(provider: unknown, model: unknown, providerFromConfig = false): string | undefined {
 	if (model === undefined) return undefined;
 	if (typeof model !== "string" || !model.trim()) {
 		throw new Error("web_search model must be a non-empty string containing an exact server model ID");
 	}
-	const selected = typeof provider === "string" ? provider.trim().toLowerCase() : "";
-	if (providerFromConfig || !selected || selected === "auto" || selected === "all") {
-		throw new Error("web_search model requires an explicit single provider: openai, xai, mistral, or gemini (API only); omitted, auto, all, and array providers are ambiguous");
+	const selected = parseProviderArgument(provider);
+	if (providerFromConfig || selected === undefined || Array.isArray(selected) || selected === "auto" || selected === "all") {
+		throw new Error("web_search model requires an explicit single provider: openai, xai, mistral, or gemini (API only); omitted, auto, all, and provider lists are ambiguous");
 	}
 	if (!["openai", "xai", "mistral", "gemini"].includes(selected)) {
 		throw new Error(`web_search model is not supported for provider ${JSON.stringify(selected)}; use openai, xai, mistral, or gemini (API only)`);
 	}
-	assertSearchProviderSelectionAllowed(selected as ResolvedSearchProvider, "Requested provider");
+	assertSearchProviderSelectionAllowed(selected, "Requested provider");
 	return model.trim();
 }
 
