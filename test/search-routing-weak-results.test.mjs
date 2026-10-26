@@ -139,6 +139,8 @@ test("invalid timeoutMs and fallbackOn kinds are rejected", async () => {
 		[{ providers: ["brave"], fallbackOn: base, timeoutMs: 0 }, "timeoutMs"],
 		[{ providers: ["brave"], fallbackOn: base, timeoutMs: "soon" }, "timeoutMs"],
 		[{ providers: ["brave"], fallbackOn: ["weak"] }, "fallbackOn"],
+		[{ providers: ["brave"], fallbackOn: [...base, "off-topic"] }, "offTopicModel"],
+		[{ providers: ["brave"], fallbackOn: [...base, "off-topic"], offTopicModel: "openrouter/cloudflare/clef" }, "offTopicModel"],
 	]) {
 		const child = await run(routing, `
 			const { search } = await import(${JSON.stringify(searchModuleUrl)});
@@ -146,4 +148,101 @@ test("invalid timeoutMs and fallbackOn kinds are rejected", async () => {
 		`);
 		assert.match(child.stdout, new RegExp(`searchRouting\\.${field}`), child.stderr);
 	}
+});
+
+test("off-topic moves on only when the judge clears the model's threshold, and a judge failure keeps the response", async () => {
+	const routing = { providers: ["brave", "tavily"], fallbackOn: [...base, "off-topic"], offTopicModel: "cloudflare-workers-ai/@cf/cloudflare/clef" };
+	// off_topic probability per provider's first result title; "error" makes the judge fail.
+	for (const [scores, provider, calls] of [
+		[{ B: 0.9, T: 0.1 }, "tavily", ["brave", "judge B", "tavily", "judge T"]],
+		[{ B: 0.84 }, "brave", ["brave", "judge B"]],
+		[{ B: 0.9, T: 0.95 }, "brave", ["brave", "judge B", "tavily", "judge T"]],
+		[{ B: "error" }, "brave", ["brave", "judge B"]],
+	]) {
+		const child = await run(routing, `
+			const scores = ${JSON.stringify(scores)};
+			const modelRegistry = { findOfType: () => ({ id: "clef" }), async classify(_model, context) {
+				const title = context.state.results[0].title;
+				calls.push("judge " + title);
+				if (scores[title] === "error") throw new Error("judge down");
+				const p = scores[title];
+				return { stopReason: "stop", answers: { relevance: { type: "choice", choice: p >= 0.5 ? "off_topic" : "addresses", probabilities: { addresses: 1 - p, off_topic: p }, confidence: p } } };
+			} };
+			globalThis.fetch = async (url) => {
+				calls.push(String(url).includes("brave") ? "brave" : "tavily");
+				return String(url).includes("brave")
+					? brave([{ title: "B", url: "https://example.com/b", description: "d" }])
+					: tavily([{ title: "T", url: "https://example.com/t", content: "text" }]);
+			};
+			const { search } = await import(${JSON.stringify(searchModuleUrl)});
+			const { activityMonitor } = await import(${JSON.stringify(new URL("../activity.ts", import.meta.url).href)});
+			const result = await search("q", { provider: "auto", extensionContext: { modelRegistry } });
+			console.log(JSON.stringify({ provider: result.provider, calls, errors: activityMonitor.getEntries().flatMap((entry) => entry.error ?? []) }));
+		`);
+		assert.equal(child.status, 0, child.stderr);
+		const out = JSON.parse(child.stdout.trim());
+		assert.deepEqual([out.provider, out.calls], [provider, calls]);
+		assert.deepEqual(out.errors, scores.B === "error" ? ["brave: off-topic check failed: judge down"] : []);
+	}
+});
+
+test("cancelling the search during the off-topic check rejects instead of keeping or skipping the response", async () => {
+	const child = await run({ providers: ["brave", "tavily"], fallbackOn: ["transient", "off-topic"], offTopicModel: "cloudflare-workers-ai/@cf/cloudflare/clef" }, `
+		const controller = new AbortController();
+		const modelRegistry = { findOfType: () => ({ id: "clef" }), async classify() {
+			controller.abort();
+			return { stopReason: "stop", answers: { relevance: { type: "choice", choice: "addresses", probabilities: { addresses: 0.9, off_topic: 0.1 }, confidence: 0.9 } } };
+		} };
+		globalThis.fetch = async (url) => {
+			calls.push(String(url).includes("brave") ? "brave" : "tavily");
+			return brave([{ title: "B", url: "https://example.com/b", description: "d" }]);
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		try { const result = await search("q", { provider: "auto", signal: controller.signal, extensionContext: { modelRegistry } }); console.log(JSON.stringify({ resolved: result.provider, calls })); }
+		catch (err) { console.log(JSON.stringify({ rejected: String(err.message), calls })); }
+	`);
+	assert.equal(child.status, 0, child.stderr);
+	const out = JSON.parse(child.stdout.trim());
+	assert.match(out.rejected ?? "", /abort/i);
+	assert.deepEqual(out.calls, ["brave"]);
+});
+
+const offTopicRouting = { providers: ["brave", "tavily"], fallbackOn: ["transient", "off-topic"], offTopicModel: "cloudflare-workers-ai/@cf/cloudflare/clef" };
+const braveOnly = `
+	globalThis.fetch = async (url) => {
+		calls.push(String(url).includes("brave") ? "brave" : "tavily");
+		return brave([{ title: "B", url: "https://example.com/b", description: "d" }]);
+	};
+	const { search } = await import(${JSON.stringify(searchModuleUrl)});
+`;
+
+test("a route deadline during the off-topic check keeps the response and logs the timeout", async () => {
+	const child = await run({ ...offTopicRouting, timeoutMs: 150 }, `
+		const modelRegistry = { findOfType: () => ({ id: "clef" }), classify: (_model, _context, { signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason))) };
+		const keepAlive = setInterval(() => {}, 1000); // AbortSignal.timeout timers are unref'd
+		${braveOnly}
+		const { activityMonitor } = await import(${JSON.stringify(new URL("../activity.ts", import.meta.url).href)});
+		const result = await search("q", { provider: "auto", extensionContext: { modelRegistry } });
+		clearInterval(keepAlive);
+		console.log(JSON.stringify({ provider: result.provider, calls, errors: activityMonitor.getEntries().flatMap((entry) => entry.error ?? []) }));
+	`);
+	assert.equal(child.status, 0, child.stderr);
+	assert.deepEqual(JSON.parse(child.stdout.trim()), { provider: "brave", calls: ["brave"], errors: ["brave: off-topic check failed: routing timeout after 150ms"] });
+});
+
+test("cancelling during the off-topic check rejects when a route deadline is also set", async () => {
+	const child = await run({ ...offTopicRouting, timeoutMs: 60000 }, `
+		const controller = new AbortController();
+		const modelRegistry = { findOfType: () => ({ id: "clef" }), async classify() {
+			controller.abort();
+			return { stopReason: "stop", answers: { relevance: { type: "choice", choice: "addresses", probabilities: { addresses: 0.9, off_topic: 0.1 }, confidence: 0.9 } } };
+		} };
+		${braveOnly}
+		try { const result = await search("q", { provider: "auto", signal: controller.signal, extensionContext: { modelRegistry } }); console.log(JSON.stringify({ resolved: result.provider, calls })); }
+		catch (err) { console.log(JSON.stringify({ rejected: String(err.message), calls })); }
+	`);
+	assert.equal(child.status, 0, child.stderr);
+	const out = JSON.parse(child.stdout.trim());
+	assert.match(out.rejected ?? "", /abort/i);
+	assert.deepEqual(out.calls, ["brave"]);
 });
