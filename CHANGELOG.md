@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-25
+
 ### Highlights
 
-- Pull exact facts off a page. Ask for "price: number" and get 29 back, not 40KB of HTML. It says when a value isn't there instead of guessing. Opt-in.
+- Pull exact facts off a page. Ask for "price: number" and get 29 back with the line it came from, not 40KB of HTML. It says when a value isn't there instead of guessing. Opt-in.
 - Summaries can run on the model your Pi session is using, so they stay on your local or self-hosted model.
 - The web tools take 60% less of every request to the model (2.8k → 1.1k tokens).
 - Search moves to the next provider when one comes back empty, you can put a time limit on the whole search, and DuckDuckGo no longer gets your IP blocked.
@@ -14,7 +16,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- `fetch_content` extract mode shows the page line each text or number value was found on, so you can check and cite it. Text the model is confident about but that isn't on the page is now shown as uncertain instead of extracted. ([#616](https://github.com/nicobailon/pi-web-access/issues/616))
+- `fetch_content` can read specific values off a page instead of returning all of it: a price, a release date, a rate limit, a list of supported platforms. It is off unless you add `"extract"` to `fetch.allowedModes`, and it uses Cloudflare's Clairic model with the Cloudflare key you set up in Pi (`CLOUDFLARE_API_KEY` and `CLOUDFLARE_ACCOUNT_ID`); with a `CLOUDFLARE_GATEWAY_ID` in Pi, the requests go through that Cloudflare AI Gateway. Call it with `mode: "extract"` and `fields` such as `{ "price": "number: Pro plan monthly price" }`; each field comes back as a typed value, as an uncertain guess, or as not on the page, and a value is reported only when the model is confident and it has the right type. Once it is on, the agent's tool list tells it to use extract when it needs a specific value rather than the whole page. The page text is sent to Cloudflare. Pi only; [docs/field-extract.md](https://github.com/nicobailon/pi-web-access/blob/main/docs/field-extract.md) has the details and measurements.
+- Extract mode shows the page line each text or number value was found on, so you can check and cite it. Text the model is confident about but that isn't on the page comes back as uncertain, not extracted ([#616](https://github.com/nicobailon/pi-web-access/issues/616)).
+- Codemode scripts that call `fetch_content` with `mode: "extract"` get each page's typed values as data, under `extraction` for each URL, so a script doesn't have to parse text ([#618](https://github.com/nicobailon/pi-web-access/issues/618)).
 - After an update, the first Pi session shows the highlights of the releases you skipped, once, with a link to the full changelog. A fresh install or a downgrade shows nothing.
 - Search through a self-hosted [9router](https://github.com/decolua/9router) with `provider: "ninerouter"` and `ninerouterBaseUrl`, so every search backend set up in the router works from Pi. Thanks to [@giovannirandykusuma](https://github.com/giovannirandykusuma) for [PR #612](https://github.com/nicobailon/pi-web-access/pull/612).
 - Search routing can skip a provider whose results have nothing to do with your query. Add `"off-topic"` to `searchRouting.fallbackOn` and pick a classifier model in `searchRouting.offTopicModel`; it then checks each routed answer and moves on when the results are off-topic ([#619](https://github.com/nicobailon/pi-web-access/issues/619)).
@@ -25,7 +29,6 @@ All notable changes to this project will be documented in this file.
 - `"allowHttpBaseUrls": true` (or `PI_WEB_ACCESS_ALLOW_HTTP_BASE_URLS=true`) lets provider gateway base URLs such as `braveBaseUrl` use plain `http://` on any host, for example an internal Kubernetes Service. Without it, gateway URLs must still use HTTPS unless they point at your own machine. HTTP sends API keys unencrypted, so use it only on a trusted network. Thanks to [@Coder-Sang](https://github.com/Coder-Sang) for [PR #592](https://github.com/nicobailon/pi-web-access/pull/592).
 - Web search through Azure OpenAI, which grounds answers with Bing. Point `openaiResponsesUrl` at your Azure resource's `/openai/v1/responses` endpoint and set `openaiSearchModel` to your deployment name; an Azure API key is sent in the `api-key` header and a Microsoft Entra token as Bearer auth. A Pi Azure provider can be reused with `openaiUseProviderBaseUrl`, and an active Pi model on an Azure endpoint works with `searchRouting.useCurrentModel`. Azure doesn't support `openaiUseAlphaSearch`, so that setting is rejected before any request. Bing grounding is billed separately by Microsoft; see the README for cost and privacy notes. Thanks to [@abhishek944](https://github.com/abhishek944) for [PR #599](https://github.com/nicobailon/pi-web-access/pull/599).
 - Exa search results show each source's published date and authors, and results from Exa's `publication` category (its research paper index) also show the citation count and DOI. `publication` replaces `research paper` as the documented category; `research paper` still works. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #596](https://github.com/nicobailon/pi-web-access/pull/596).
-- `fetch_content` can read specific values off a page instead of returning all of it: a price, a release date, a rate limit, a list of supported platforms. It is off unless you add `"extract"` to `fetch.allowedModes`, and it uses Cloudflare's Clairic model with the Cloudflare key you set up in Pi (`CLOUDFLARE_API_KEY` and `CLOUDFLARE_ACCOUNT_ID`); with a `CLOUDFLARE_GATEWAY_ID` in Pi, the requests go through that Cloudflare AI Gateway. Call it with `mode: "extract"` and `fields` such as `{ "price": "number: Pro plan monthly price" }`; each field comes back as a typed value, as an uncertain guess, or as not on the page, and a value is reported only when the model is confident and it has the right type. Once it is on, the agent's tool list tells it to use extract when it needs a specific value rather than the whole page. The page text is sent to Cloudflare. Pi only; [docs/field-extract.md](https://github.com/nicobailon/pi-web-access/blob/main/docs/field-extract.md) has the details and measurements.
 
 ### Changed
 
@@ -36,7 +39,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Codemode scripts that call `fetch_content` with `mode: "extract"` now get each page's typed values as data, under `extraction` for each URL. Before, the values were only in the text the model sees, so a script had to parse it. ([#618](https://github.com/nicobailon/pi-web-access/issues/618))
 - DuckDuckGo search no longer locks itself out. Several searches at once, such as a `queries` list, used to trigger DuckDuckGo's bot check for the whole IP address for 10 to 15 minutes, and every retry kept the block in place. DuckDuckGo searches now run one at a time, at least 2 seconds apart. After a bot check the provider stops sending requests for 5 minutes, doubling up to 1 hour, and fails at once with a `quota` error, so search routing can fall back right away.
 - A DuckDuckGo search that times out now fails as a network error instead of an abort, so search routing falls back to the next provider. Its 30-second limit also counts the time spent waiting behind other DuckDuckGo searches. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #593](https://github.com/nicobailon/pi-web-access/pull/593).
 - `source_check` passages from fetched pages keep the whole sentence when it contains a period inside a word, such as `example.com`. Before, the passage started after the last such period and lost its subject. Thanks to [@appe233](https://github.com/appe233) for reporting [#600](https://github.com/nicobailon/pi-web-access/issues/600).
