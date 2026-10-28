@@ -6,6 +6,7 @@ import TurndownService from "turndown";
 import pLimit from "p-limit";
 import { activityMonitor } from "./activity.ts";
 import { extractRSCContent } from "./rsc-extract.ts";
+import { extractChatGPTShareContent } from "./chatgpt-share-extract.ts";
 import { extractPDFToMarkdown, isPDF, loadPDFConfig } from "./pdf-extract.ts";
 import { extractGitHub } from "./github-extract.ts";
 import { extractGitHubIssuePr } from "./github-issue-pr.ts";
@@ -1285,6 +1286,17 @@ async function extractViaHttp(
 			response.headers.get("link"),
 			response.url || url,
 		);
+		const chatgptShareResult = extractChatGPTShareContent(text, response.url || url);
+		if (chatgptShareResult) {
+			activityMonitor.logComplete(activityId, response.status);
+			return {
+				url,
+				title: chatgptShareResult.title,
+				content: appendDeclaredWebLinks(chatgptShareResult.content, declaredLinks),
+				error: null,
+				declaredLinks,
+			};
+		}
 		const reader = new Readability(document as unknown as Document);
 		const article = reader.parse();
 

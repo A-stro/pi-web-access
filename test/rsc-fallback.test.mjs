@@ -90,7 +90,7 @@ test("short Readability output falls back to useful Defuddle content", async (t)
 	assert.match(result.content, /Useful Defuddle content after the short Readability article/);
 });
 
-test("Defuddle processing failures stay contained and do not return the fallback body", async (t) => {
+test("Defuddle handles React streaming IDs without selector errors", async (t) => {
 	const originalConsoleError = console.error;
 	t.after(() => {
 		globalThis.fetch = originalFetch;
@@ -108,7 +108,8 @@ test("Defuddle processing failures stay contained and do not return the fallback
 	const result = await extractContent("https://example.com/defuddle-selector-failure", undefined, { lookup });
 
 	assert.equal(consoleErrors.length, 0);
-	assert.match(result.error, /Defuddle failed to process document: Unknown pseudo-class :a/);
+	assert.equal(result.error, null);
+	assert.match(result.content, /This is substantial article text/);
 	assert.doesNotMatch(result.content, /Copyright 2026/);
 });
 
