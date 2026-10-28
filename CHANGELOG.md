@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Shared ChatGPT conversations now extract from the page's React Router payload when the server-rendered HTML contains no visible turns.
+- Defuddle 0.19.6 prevents selector errors on React streaming markup with IDs such as `S:0`.
+
 ## [0.45.0] - 2026-10-25
 
 ### Highlights
